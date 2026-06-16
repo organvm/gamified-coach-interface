@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const { AppError } = require('../middleware/errorHandler');
 const User = require('../models/User');
+const { Op } = require('sequelize');
 const logger = require('../utils/logger');
 const { trackEvent } = require('../services/analyticsService');
 
@@ -51,7 +52,7 @@ exports.register = async (req, res, next) => {
     // Check if user exists
     const existingUser = await User.findOne({
       where: {
-        [sequelize.Op.or]: [{ email }, { username }]
+        [Op.or]: [{ email }, { username }]
       }
     });
 
