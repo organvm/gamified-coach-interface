@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const http = require('http');
 const socketIo = require('socket.io');
+const sanitizeHtml = require('sanitize-html');
 require('dotenv').config();
 
 const { sequelize } = require('./config/database');
@@ -176,11 +177,22 @@ io.on('connection', (socket) => {
   socket.on('send_message', async (data) => {
     try {
       const { recipientId, message } = data;
+
+      // Sanitize message content
+      const cleanMessage = sanitizeHtml(message, {
+        allowedTags: [], // Strip all tags
+        allowedAttributes: {}
+      });
+
+      if (!cleanMessage.trim()) {
+        return;
+      }
+
       // Save message to database
       // Emit to recipient
       io.to(`user:${recipientId}`).emit('new_message', {
         senderId: socket.user.id,
-        message,
+        message: cleanMessage,
         timestamp: new Date()
       });
     } catch (error) {
@@ -198,12 +210,22 @@ io.on('connection', (socket) => {
         throw new Error('NOT_AUTHORIZED_GUILD');
       }
 
+      // Sanitize message content
+      const cleanMessage = sanitizeHtml(message, {
+        allowedTags: [], // Strip all tags
+        allowedAttributes: {}
+      });
+
+      if (!cleanMessage.trim()) {
+        return;
+      }
+
       // Save message
       // Broadcast to guild
       io.to(`guild:${guildId}`).emit('new_guild_message', {
         senderId: socket.user.id,
         username: socket.user.username,
-        message,
+        message: cleanMessage,
         timestamp: new Date()
       });
     } catch (error) {
