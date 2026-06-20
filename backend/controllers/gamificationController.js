@@ -410,7 +410,8 @@ exports.saveOnboarding = async (req, res, next) => {
     }
 
     // Update user fields
-    if (role) user.role = role; // Note: In a real app, changing role might require more checks
+    // Security: Prevent role escalation via onboarding
+    // if (role) user.role = role; // DISABLED: Users cannot set their own role
     if (gamificationStyle) user.gamification_style = gamificationStyle;
     if (gamificationTheme) user.gamification_theme = gamificationTheme;
     user.onboarding_completed = true;
