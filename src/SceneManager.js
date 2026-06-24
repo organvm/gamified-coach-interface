@@ -18,6 +18,11 @@ export class SceneManager {
         this.animationId = null;
         this.frameCount = 0;
 
+        // Optimization: Bind animate to this instance once, instead of creating
+        // a new arrow function/closure every single frame in requestAnimationFrame.
+        // This reduces garbage collection pressure significantly in the render loop.
+        this.boundAnimate = this.animate.bind(this);
+
         this.init();
         this.setupLights();
         this.setupObjects();
@@ -157,7 +162,8 @@ export class SceneManager {
     }
 
     animate() {
-        this.animationId = requestAnimationFrame(() => this.animate());
+        // Use the pre-bound function instead of creating a new closure
+        this.animationId = requestAnimationFrame(this.boundAnimate);
 
         // Update objects
         const deltaTime = 0.016; // ~60fps
