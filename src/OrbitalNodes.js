@@ -57,13 +57,15 @@ export class OrbitalNodes {
         nodeConfigs.forEach(config => {
             const material = new THREE.MeshBasicMaterial({
                 color: config.color,
+                // Note: emissive properties are not supported by MeshBasicMaterial
+                // but kept for potential future upgrade to Standard/Lambert
                 emissive: config.color,
                 emissiveIntensity: 0.5,
                 transparent: true,
                 opacity: 0.9
             });
 
-            const node = new THREE.Mesh(sharedGeometry, material);
+            const node = new THREE.Mesh(geometry, material);
             node.userData = {
                 id: config.id,
                 label: config.label,
@@ -83,7 +85,10 @@ export class OrbitalNodes {
     update() {
         const time = Date.now() * 0.001;
 
-        this.nodes.forEach((node, i) => {
+        // Optimization: Use for...of loop instead of forEach to avoid
+        // creating a closure and function scope every frame
+        let i = 0;
+        for (const node of this.nodes) {
             const angle = (i / this.nodes.length) * Math.PI * 2 + time * this.orbitSpeed;
 
             // Position nodes in orbit around core
@@ -102,7 +107,8 @@ export class OrbitalNodes {
             } else {
                 node.material.emissiveIntensity = 0.5;
             }
-        });
+            i++;
+        }
     }
 
     // Handle click detection with raycaster
