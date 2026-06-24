@@ -129,6 +129,9 @@ exports.checkAchievements = async (req, res, next) => {
     });
 
     const unlockedAchievements = [];
+    let totalXpReward = 0;
+    const notifications = [];
+    const analyticsEvents = [];
 
     for (const achievement of achievements) {
       const requirements = achievement.requirements;
@@ -143,39 +146,20 @@ exports.checkAchievements = async (req, res, next) => {
       }
 
       if (unlocked) {
-        // Unlock achievement
-        await sequelize.query(`
-          INSERT INTO user_achievements (user_id, achievement_id, is_completed, unlocked_at)
-          VALUES (:userId, :achievementId, TRUE, NOW())
-          ON CONFLICT (user_id, achievement_id) DO UPDATE
-          SET is_completed = TRUE, unlocked_at = NOW()
-        `, {
-          replacements: {
-            userId,
-            achievementId: achievement.id
-          }
-        });
-
-        // Award XP
-        await user.addXP(achievement.xp_reward);
-
-        // Create notification
-        await sequelize.query(`
-          INSERT INTO notifications (user_id, notification_type, title, message, data)
-          VALUES (:userId, 'achievement', :title, :message, :data)
-        `, {
-          replacements: {
-            userId,
-            title: '🏆 ACHIEVEMENT UNLOCKED!',
-            message: `You unlocked: ${achievement.name}`,
-            data: JSON.stringify({ achievementId: achievement.id, xpReward: achievement.xp_reward })
-          }
-        });
-
         unlockedAchievements.push(achievement);
+        totalXpReward += achievement.xp_reward;
 
-        // Track event
-        await trackEvent({
+        // Prepare notification
+        notifications.push({
+          user_id: userId,
+          notification_type: 'achievement',
+          title: '🏆 ACHIEVEMENT UNLOCKED!',
+          message: `You unlocked: ${achievement.name}`,
+          data: JSON.stringify({ achievementId: achievement.id, xpReward: achievement.xp_reward })
+        });
+
+        // Prepare analytics
+        analyticsEvents.push({
           userId,
           eventType: 'achievement_unlocked',
           properties: {
@@ -185,6 +169,44 @@ exports.checkAchievements = async (req, res, next) => {
           }
         });
       }
+    }
+
+    if (unlockedAchievements.length > 0) {
+      // 1. Batch Insert User Achievements
+      // Parallelize inserts since they are independent
+      const insertPromises = unlockedAchievements.map(achievement =>
+        sequelize.query(`
+          INSERT INTO user_achievements (user_id, achievement_id, is_completed, unlocked_at)
+          VALUES (:userId, :achievementId, TRUE, NOW())
+          ON CONFLICT (user_id, achievement_id) DO UPDATE
+          SET is_completed = TRUE, unlocked_at = NOW()
+        `, {
+          replacements: {
+            userId,
+            achievementId: achievement.id
+          }
+        })
+      );
+
+      await Promise.all(insertPromises);
+
+      // 2. Single XP Update (Reduces User.save() calls from N to 1)
+      if (totalXpReward > 0) {
+        await user.addXP(totalXpReward);
+      }
+
+      // 3. Batch Insert Notifications
+      await Promise.all(notifications.map(n =>
+        sequelize.query(`
+          INSERT INTO notifications (user_id, notification_type, title, message, data)
+          VALUES (:user_id, :notification_type, :title, :message, :data)
+        `, {
+          replacements: n
+        })
+      ));
+
+      // 4. Track Events
+      await Promise.all(analyticsEvents.map(event => trackEvent(event)));
     }
 
     res.json({
