@@ -52,18 +52,16 @@ export class OrbitalNodes {
 
         // Optimization: Create geometry once and reuse it for all nodes
         // This reduces memory overhead and GPU setup time
-        const geometry = new THREE.SphereGeometry(0.15, 16, 16);
+        const nodeGeometry = new THREE.SphereGeometry(0.15, 16, 16);
 
         nodeConfigs.forEach(config => {
             const material = new THREE.MeshBasicMaterial({
                 color: config.color,
-                emissive: config.color,
-                emissiveIntensity: 0.5,
                 transparent: true,
                 opacity: 0.9
             });
 
-            const node = new THREE.Mesh(sharedGeometry, material);
+            const node = new THREE.Mesh(nodeGeometry, material);
             node.userData = {
                 id: config.id,
                 label: config.label,
