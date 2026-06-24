@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const { AppError } = require('../middleware/errorHandler');
 const User = require('../models/User');
+const { Op } = require('sequelize');
 const logger = require('../utils/logger');
 const { trackEvent } = require('../services/analyticsService');
 
@@ -51,7 +52,7 @@ exports.register = async (req, res, next) => {
     // Check if user exists
     const existingUser = await User.findOne({
       where: {
-        [sequelize.Op.or]: [{ email }, { username }]
+        [Op.or]: [{ email }, { username }]
       }
     });
 
@@ -221,6 +222,10 @@ exports.refreshToken = async (req, res, next) => {
 
     if (!user) {
       throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    }
+
+    if (user.status !== 'active') {
+      throw new AppError('Account is not active', 403, 'ACCOUNT_INACTIVE');
     }
 
     // Generate new access token
