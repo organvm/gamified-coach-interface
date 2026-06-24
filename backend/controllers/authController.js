@@ -262,14 +262,17 @@ exports.logout = async (req, res, next) => {
 // @access  Private
 exports.changePassword = async (req, res, next) => {
   try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const errorMessages = errors.array().map(err => err.msg).join(', ');
+      throw new AppError(errorMessages, 400, 'VALIDATION_ERROR');
+    }
+
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
       throw new AppError('Please provide current and new password', 400, 'MISSING_FIELDS');
-    }
-
-    if (newPassword.length < 8) {
-      throw new AppError('New password must be at least 8 characters', 400, 'WEAK_PASSWORD');
     }
 
     const user = await User.findByPk(req.user.id);
