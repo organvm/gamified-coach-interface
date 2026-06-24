@@ -176,6 +176,16 @@ io.on('connection', (socket) => {
   socket.on('send_message', async (data) => {
     try {
       const { recipientId, message } = data;
+
+      // Input validation
+      if (typeof message !== 'string' || message.length > 1000) {
+        throw new Error('INVALID_MESSAGE_CONTENT');
+      }
+
+      if (!recipientId || typeof recipientId !== 'string') {
+        throw new Error('INVALID_RECIPIENT');
+      }
+
       // Save message to database
       // Emit to recipient
       io.to(`user:${recipientId}`).emit('new_message', {
@@ -193,8 +203,17 @@ io.on('connection', (socket) => {
     try {
       const { guildId, message } = data;
 
+      // Input validation
+      if (typeof message !== 'string' || message.length > 1000) {
+        throw new Error('INVALID_MESSAGE_CONTENT');
+      }
+
       // Verify user is member of guild
-      if (!socket.user?.guilds || !socket.user.guilds.includes(guildId)) {
+      // Cast both to strings for comparison to be safe against type mismatches
+      const userGuilds = (socket.user?.guilds || []).map(String);
+      const targetGuildId = String(guildId);
+
+      if (!userGuilds.includes(targetGuildId)) {
         throw new Error('NOT_AUTHORIZED_GUILD');
       }
 
