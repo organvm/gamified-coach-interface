@@ -54,16 +54,14 @@ export class OrbitalNodes {
         // This reduces memory overhead and GPU setup time
         const geometry = new THREE.SphereGeometry(0.15, 16, 16);
 
-        nodeConfigs.forEach(config => {
+        for (const config of nodeConfigs) {
             const material = new THREE.MeshBasicMaterial({
                 color: config.color,
-                emissive: config.color,
-                emissiveIntensity: 0.5,
                 transparent: true,
                 opacity: 0.9
             });
 
-            const node = new THREE.Mesh(sharedGeometry, material);
+            const node = new THREE.Mesh(geometry, material);
             node.userData = {
                 id: config.id,
                 label: config.label,
@@ -77,14 +75,16 @@ export class OrbitalNodes {
             // Add point light to each node for glow effect
             const light = new THREE.PointLight(config.color, 0.5, 2);
             node.add(light);
-        });
+        }
     }
 
     update() {
         const time = Date.now() * 0.001;
+        const totalNodes = this.nodes.length;
+        let i = 0;
 
-        this.nodes.forEach((node, i) => {
-            const angle = (i / this.nodes.length) * Math.PI * 2 + time * this.orbitSpeed;
+        for (const node of this.nodes) {
+            const angle = (i / totalNodes) * Math.PI * 2 + time * this.orbitSpeed;
 
             // Position nodes in orbit around core
             node.position.x = Math.cos(angle) * this.orbitRadius;
@@ -93,16 +93,16 @@ export class OrbitalNodes {
 
             // Pulse effect
             const pulse = Math.sin(time * 2 + i) * 0.02 + 1;
-            node.scale.setScalar(pulse);
 
-            // Highlight active node
+            // Highlight active node (only scale, skip invalid material update)
             if (this.activeNode === node.userData.id) {
-                node.material.emissiveIntensity = 1.0;
                 node.scale.setScalar(1.3);
             } else {
-                node.material.emissiveIntensity = 0.5;
+                node.scale.setScalar(pulse);
             }
-        });
+
+            i++;
+        }
     }
 
     // Handle click detection with raycaster
@@ -154,16 +154,6 @@ export class OrbitalNodes {
         window.dispatchEvent(new CustomEvent('node-activated', {
             detail: { nodeId }
         }));
-
-        // Visual feedback
-        const node = this.nodes.find(n => n.userData.id === nodeId);
-        if (node) {
-            // Flash effect
-            node.material.emissiveIntensity = 2.0;
-            setTimeout(() => {
-                node.material.emissiveIntensity = 1.0;
-            }, 200);
-        }
     }
 
     deactivateNode() {
