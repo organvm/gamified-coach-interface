@@ -401,7 +401,7 @@ exports.unlockSkill = async (req, res, next) => {
 exports.saveOnboarding = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { role, gamificationStyle, gamificationTheme } = req.body;
+    const { gamificationStyle, gamificationTheme } = req.body;
 
     const user = await User.findByPk(userId);
 
@@ -410,7 +410,7 @@ exports.saveOnboarding = async (req, res, next) => {
     }
 
     // Update user fields
-    if (role) user.role = role; // Note: In a real app, changing role might require more checks
+    // SECURITY: Role update removed to prevent privilege escalation (Mass Assignment)
     if (gamificationStyle) user.gamification_style = gamificationStyle;
     if (gamificationTheme) user.gamification_theme = gamificationTheme;
     user.onboarding_completed = true;
@@ -421,7 +421,6 @@ exports.saveOnboarding = async (req, res, next) => {
       userId,
       eventType: 'onboarding_completed',
       properties: {
-        role,
         style: gamificationStyle,
         theme: gamificationTheme
       }
@@ -433,7 +432,7 @@ exports.saveOnboarding = async (req, res, next) => {
       data: {
         user: {
           id: user.id,
-          role: user.role,
+          role: user.role, // Return current role, but don't allow updating it
           gamificationStyle: user.gamification_style,
           gamificationTheme: user.gamification_theme,
           onboardingCompleted: user.onboarding_completed
