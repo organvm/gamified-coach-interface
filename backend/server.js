@@ -176,6 +176,13 @@ io.on('connection', (socket) => {
   socket.on('send_message', async (data) => {
     try {
       const { recipientId, message } = data;
+
+      // Validate message input
+      if (typeof message !== 'string' || message.length > 1000) {
+        socket.emit('error', { message: 'Invalid message format or length limit exceeded (max 1000 chars)' });
+        return;
+      }
+
       // Save message to database
       // Emit to recipient
       io.to(`user:${recipientId}`).emit('new_message', {
@@ -192,6 +199,12 @@ io.on('connection', (socket) => {
   socket.on('guild_message', async (data) => {
     try {
       const { guildId, message } = data;
+
+      // Validate message input
+      if (typeof message !== 'string' || message.length > 1000) {
+        socket.emit('error', { message: 'Invalid message format or length limit exceeded (max 1000 chars)' });
+        return;
+      }
 
       // Verify user is member of guild
       if (!socket.user?.guilds || !socket.user.guilds.includes(guildId)) {
