@@ -12,6 +12,7 @@ require('dotenv').config();
 const { sequelize } = require('./config/database');
 const logger = require('./utils/logger');
 const errorHandler = require('./middleware/errorHandler');
+const { escapeHtml } = require('./utils/security');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -180,7 +181,7 @@ io.on('connection', (socket) => {
       // Emit to recipient
       io.to(`user:${recipientId}`).emit('new_message', {
         senderId: socket.user.id,
-        message,
+        message: escapeHtml(message),
         timestamp: new Date()
       });
     } catch (error) {
@@ -203,7 +204,7 @@ io.on('connection', (socket) => {
       io.to(`guild:${guildId}`).emit('new_guild_message', {
         senderId: socket.user.id,
         username: socket.user.username,
-        message,
+        message: escapeHtml(message),
         timestamp: new Date()
       });
     } catch (error) {
