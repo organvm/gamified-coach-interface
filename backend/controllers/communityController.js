@@ -312,8 +312,12 @@ exports.createPost = async (req, res, next) => {
     const userId = req.user.id;
     const { guildId, postType, title, content, mediaUrls } = req.body;
 
-    if (!content || content.length < 10) {
-      throw new AppError('Post content must be at least 10 characters', 400, 'INVALID_CONTENT');
+    if (typeof title !== 'string' || title.length > 200) {
+      throw new AppError('Title must be a string under 200 characters', 400, 'INVALID_TITLE');
+    }
+
+    if (typeof content !== 'string' || content.length < 10 || content.length > 5000) {
+      throw new AppError('Post content must be between 10 and 5000 characters', 400, 'INVALID_CONTENT');
     }
 
     // Verify guild membership if posting to a guild
@@ -471,8 +475,8 @@ exports.addComment = async (req, res, next) => {
     const { postId } = req.params;
     const { content, parentCommentId } = req.body;
 
-    if (!content || content.length < 1) {
-      throw new AppError('Comment cannot be empty', 400, 'INVALID_CONTENT');
+    if (typeof content !== 'string' || content.length < 1 || content.length > 2000) {
+      throw new AppError('Comment must be between 1 and 2000 characters', 400, 'INVALID_CONTENT');
     }
 
     // Create comment
