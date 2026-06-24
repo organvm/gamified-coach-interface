@@ -105,16 +105,6 @@ const User = sequelize.define('User', {
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
-  indexes: [
-    // Index for filtering active users (high frequency query)
-    {
-      fields: ['status']
-    },
-    // Composite index for leaderboard sorting and pagination
-    {
-      fields: ['total_xp', 'level']
-    }
-  ],
   hooks: {
     beforeCreate: async (user) => {
       if (user.password_hash) {
