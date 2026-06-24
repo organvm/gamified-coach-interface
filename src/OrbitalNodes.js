@@ -63,7 +63,8 @@ export class OrbitalNodes {
                 opacity: 0.9
             });
 
-            const node = new THREE.Mesh(sharedGeometry, material);
+            // FIXED: Use 'geometry' instead of undefined 'sharedGeometry' to prevent crash
+            const node = new THREE.Mesh(geometry, material);
             node.userData = {
                 id: config.id,
                 label: config.label,
