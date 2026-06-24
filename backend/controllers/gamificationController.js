@@ -129,6 +129,7 @@ exports.checkAchievements = async (req, res, next) => {
     });
 
     const unlockedAchievements = [];
+    let totalXpReward = 0;
 
     for (const achievement of achievements) {
       const requirements = achievement.requirements;
@@ -143,6 +144,15 @@ exports.checkAchievements = async (req, res, next) => {
       }
 
       if (unlocked) {
+        unlockedAchievements.push(achievement);
+        totalXpReward += achievement.xp_reward;
+      }
+    }
+
+    if (unlockedAchievements.length > 0) {
+      // ⚡ Bolt: Batch database operations for performance
+      // Execute all inserts concurrently
+      await Promise.all(unlockedAchievements.map(async (achievement) => {
         // Unlock achievement
         await sequelize.query(`
           INSERT INTO user_achievements (user_id, achievement_id, is_completed, unlocked_at)
@@ -155,9 +165,6 @@ exports.checkAchievements = async (req, res, next) => {
             achievementId: achievement.id
           }
         });
-
-        // Award XP
-        await user.addXP(achievement.xp_reward);
 
         // Create notification
         await sequelize.query(`
@@ -172,8 +179,6 @@ exports.checkAchievements = async (req, res, next) => {
           }
         });
 
-        unlockedAchievements.push(achievement);
-
         // Track event
         await trackEvent({
           userId,
@@ -184,7 +189,10 @@ exports.checkAchievements = async (req, res, next) => {
             xpReward: achievement.xp_reward
           }
         });
-      }
+      }));
+
+      // ⚡ Bolt: Update User XP only once with accumulated amount
+      await user.addXP(totalXpReward);
     }
 
     res.json({
