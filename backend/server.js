@@ -194,7 +194,8 @@ io.on('connection', (socket) => {
       const { guildId, message } = data;
 
       // Verify user is member of guild
-      if (!socket.user?.guilds || !socket.user.guilds.includes(guildId)) {
+      // Cast both to String to prevent type mismatch vulnerabilities/bugs (DoS)
+      if (!socket.user?.guilds || !socket.user.guilds.map(String).includes(String(guildId))) {
         throw new Error('NOT_AUTHORIZED_GUILD');
       }
 
