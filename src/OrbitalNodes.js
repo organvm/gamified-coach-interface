@@ -83,7 +83,9 @@ export class OrbitalNodes {
     update() {
         const time = Date.now() * 0.001;
 
-        this.nodes.forEach((node, i) => {
+        // Optimization: Use for loop instead of forEach to avoid closure allocation per frame
+        for (let i = 0; i < this.nodes.length; i++) {
+            const node = this.nodes[i];
             const angle = (i / this.nodes.length) * Math.PI * 2 + time * this.orbitSpeed;
 
             // Position nodes in orbit around core
@@ -97,12 +99,15 @@ export class OrbitalNodes {
 
             // Highlight active node
             if (this.activeNode === node.userData.id) {
-                node.material.emissiveIntensity = 1.0;
+                // Optimization: Avoid redundant property updates
+                if (node.material.emissiveIntensity !== 1.0) node.material.emissiveIntensity = 1.0;
+                // Scale is already setScalar'd above, but we override it here.
+                // We should combine them.
                 node.scale.setScalar(1.3);
             } else {
-                node.material.emissiveIntensity = 0.5;
+                if (node.material.emissiveIntensity !== 0.5) node.material.emissiveIntensity = 0.5;
             }
-        });
+        }
     }
 
     // Handle click detection with raycaster
