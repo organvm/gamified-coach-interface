@@ -176,6 +176,16 @@ io.on('connection', (socket) => {
   socket.on('send_message', async (data) => {
     try {
       const { recipientId, message } = data;
+
+      // Validate input
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        throw new Error('INVALID_MESSAGE');
+      }
+
+      if (message.length > 1000) {
+        throw new Error('MESSAGE_TOO_LONG');
+      }
+
       // Save message to database
       // Emit to recipient
       io.to(`user:${recipientId}`).emit('new_message', {
@@ -184,7 +194,10 @@ io.on('connection', (socket) => {
         timestamp: new Date()
       });
     } catch (error) {
-      socket.emit('error', { message: 'Failed to send message' });
+      const errorMessage = error.message === 'MESSAGE_TOO_LONG'
+        ? 'Message too long (max 1000 characters)'
+        : 'Invalid message format';
+      socket.emit('error', { message: errorMessage });
     }
   });
 
@@ -192,6 +205,15 @@ io.on('connection', (socket) => {
   socket.on('guild_message', async (data) => {
     try {
       const { guildId, message } = data;
+
+      // Validate input
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        throw new Error('INVALID_MESSAGE');
+      }
+
+      if (message.length > 2000) {
+        throw new Error('MESSAGE_TOO_LONG');
+      }
 
       // Verify user is member of guild
       if (!socket.user?.guilds || !socket.user.guilds.includes(guildId)) {
@@ -207,9 +229,16 @@ io.on('connection', (socket) => {
         timestamp: new Date()
       });
     } catch (error) {
-      const errorMessage = error.message === 'NOT_AUTHORIZED_GUILD'
-        ? 'You are not a member of this guild'
-        : 'Failed to send guild message';
+      let errorMessage = 'Failed to send guild message';
+
+      if (error.message === 'NOT_AUTHORIZED_GUILD') {
+        errorMessage = 'You are not a member of this guild';
+      } else if (error.message === 'MESSAGE_TOO_LONG') {
+        errorMessage = 'Message too long (max 2000 characters)';
+      } else if (error.message === 'INVALID_MESSAGE') {
+        errorMessage = 'Invalid message format';
+      }
+
       socket.emit('error', { message: errorMessage });
     }
   });
