@@ -129,6 +129,7 @@ exports.checkAchievements = async (req, res, next) => {
     });
 
     const unlockedAchievements = [];
+    let totalXpReward = 0;
 
     for (const achievement of achievements) {
       const requirements = achievement.requirements;
@@ -156,8 +157,8 @@ exports.checkAchievements = async (req, res, next) => {
           }
         });
 
-        // Award XP
-        await user.addXP(achievement.xp_reward);
+        // Accumulate XP to batch database updates
+        totalXpReward += achievement.xp_reward;
 
         // Create notification
         await sequelize.query(`
@@ -185,6 +186,11 @@ exports.checkAchievements = async (req, res, next) => {
           }
         });
       }
+    }
+
+    // Batch update user XP once to reduce database writes
+    if (totalXpReward > 0) {
+      await user.addXP(totalXpReward);
     }
 
     res.json({
