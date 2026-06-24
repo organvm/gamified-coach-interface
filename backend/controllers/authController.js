@@ -223,6 +223,10 @@ exports.refreshToken = async (req, res, next) => {
       throw new AppError('User not found', 404, 'USER_NOT_FOUND');
     }
 
+    if (user.status !== 'active') {
+      throw new AppError('Account is not active', 403, 'ACCOUNT_INACTIVE');
+    }
+
     // Generate new access token
     const newToken = generateToken(user);
 
