@@ -129,6 +129,8 @@ exports.checkAchievements = async (req, res, next) => {
     });
 
     const unlockedAchievements = [];
+    let totalXPReward = 0;
+    const dbPromises = [];
 
     for (const achievement of achievements) {
       const requirements = achievement.requirements;
@@ -143,8 +145,12 @@ exports.checkAchievements = async (req, res, next) => {
       }
 
       if (unlocked) {
+        // Accumulate XP
+        totalXPReward += achievement.xp_reward;
+        unlockedAchievements.push(achievement);
+
         // Unlock achievement
-        await sequelize.query(`
+        dbPromises.push(sequelize.query(`
           INSERT INTO user_achievements (user_id, achievement_id, is_completed, unlocked_at)
           VALUES (:userId, :achievementId, TRUE, NOW())
           ON CONFLICT (user_id, achievement_id) DO UPDATE
@@ -154,13 +160,10 @@ exports.checkAchievements = async (req, res, next) => {
             userId,
             achievementId: achievement.id
           }
-        });
-
-        // Award XP
-        await user.addXP(achievement.xp_reward);
+        }));
 
         // Create notification
-        await sequelize.query(`
+        dbPromises.push(sequelize.query(`
           INSERT INTO notifications (user_id, notification_type, title, message, data)
           VALUES (:userId, 'achievement', :title, :message, :data)
         `, {
@@ -170,12 +173,10 @@ exports.checkAchievements = async (req, res, next) => {
             message: `You unlocked: ${achievement.name}`,
             data: JSON.stringify({ achievementId: achievement.id, xpReward: achievement.xp_reward })
           }
-        });
-
-        unlockedAchievements.push(achievement);
+        }));
 
         // Track event
-        await trackEvent({
+        dbPromises.push(trackEvent({
           userId,
           eventType: 'achievement_unlocked',
           properties: {
@@ -183,8 +184,18 @@ exports.checkAchievements = async (req, res, next) => {
             achievementName: achievement.name,
             xpReward: achievement.xp_reward
           }
-        });
+        }));
       }
+    }
+
+    // Performance optimization: Execute all DB operations concurrently
+    if (dbPromises.length > 0) {
+      await Promise.all(dbPromises);
+    }
+
+    // Update user XP once
+    if (totalXPReward > 0) {
+      await user.addXP(totalXPReward);
     }
 
     res.json({
