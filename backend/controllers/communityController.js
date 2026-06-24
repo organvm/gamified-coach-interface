@@ -2,6 +2,7 @@ const { sequelize } = require('../config/database');
 const { AppError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const { trackEvent } = require('../services/analyticsService');
+const { escapeHtml } = require('../utils/security');
 
 // ============================================
 // GUILDS
@@ -339,8 +340,8 @@ exports.createPost = async (req, res, next) => {
         userId,
         guildId: guildId || null,
         postType: postType || 'discussion',
-        title,
-        content,
+        title: escapeHtml(title),
+        content: escapeHtml(content),
         mediaUrls: JSON.stringify(mediaUrls || [])
       }
     });
@@ -485,7 +486,7 @@ exports.addComment = async (req, res, next) => {
         postId,
         userId,
         parentCommentId: parentCommentId || null,
-        content
+        content: escapeHtml(content)
       }
     });
 
