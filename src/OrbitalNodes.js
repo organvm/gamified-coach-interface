@@ -52,13 +52,11 @@ export class OrbitalNodes {
 
         // Optimization: Create geometry once and reuse it for all nodes
         // This reduces memory overhead and GPU setup time
-        const geometry = new THREE.SphereGeometry(0.15, 16, 16);
+        const sharedGeometry = new THREE.SphereGeometry(0.15, 16, 16);
 
         nodeConfigs.forEach(config => {
             const material = new THREE.MeshBasicMaterial({
                 color: config.color,
-                emissive: config.color,
-                emissiveIntensity: 0.5,
                 transparent: true,
                 opacity: 0.9
             });
@@ -82,9 +80,13 @@ export class OrbitalNodes {
 
     update() {
         const time = Date.now() * 0.001;
+        const nodeCount = this.nodes.length;
 
-        this.nodes.forEach((node, i) => {
-            const angle = (i / this.nodes.length) * Math.PI * 2 + time * this.orbitSpeed;
+        // Optimization: Use for loop instead of forEach for performance in render loop
+        // Also removed ineffective material property updates (emissiveIntensity on MeshBasicMaterial)
+        for (let i = 0; i < nodeCount; i++) {
+            const node = this.nodes[i];
+            const angle = (i / nodeCount) * Math.PI * 2 + time * this.orbitSpeed;
 
             // Position nodes in orbit around core
             node.position.x = Math.cos(angle) * this.orbitRadius;
@@ -97,12 +99,9 @@ export class OrbitalNodes {
 
             // Highlight active node
             if (this.activeNode === node.userData.id) {
-                node.material.emissiveIntensity = 1.0;
                 node.scale.setScalar(1.3);
-            } else {
-                node.material.emissiveIntensity = 0.5;
             }
-        });
+        }
     }
 
     // Handle click detection with raycaster
