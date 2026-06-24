@@ -160,9 +160,10 @@ export class SceneManager {
         this.animationId = requestAnimationFrame(() => this.animate());
 
         // Update objects
+        const time = Date.now() * 0.001;
         const deltaTime = 0.016; // ~60fps
         this.strategyCore.update(deltaTime);
-        this.orbitalNodes.update();
+        this.orbitalNodes.update(time);
 
         // Throttle hover check to every 3rd frame (20fps effective check) to save CPU
         // This maintains interactivity with moving objects while reducing raycasting overhead
