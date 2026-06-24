@@ -57,13 +57,11 @@ export class OrbitalNodes {
         nodeConfigs.forEach(config => {
             const material = new THREE.MeshBasicMaterial({
                 color: config.color,
-                emissive: config.color,
-                emissiveIntensity: 0.5,
                 transparent: true,
                 opacity: 0.9
             });
 
-            const node = new THREE.Mesh(sharedGeometry, material);
+            const node = new THREE.Mesh(geometry, material);
             node.userData = {
                 id: config.id,
                 label: config.label,
@@ -82,9 +80,12 @@ export class OrbitalNodes {
 
     update() {
         const time = Date.now() * 0.001;
+        const nodeCount = this.nodes.length;
 
-        this.nodes.forEach((node, i) => {
-            const angle = (i / this.nodes.length) * Math.PI * 2 + time * this.orbitSpeed;
+        // Optimization: Use standard for loop to avoid closure allocation overhead in hot path
+        for (let i = 0; i < nodeCount; i++) {
+            const node = this.nodes[i];
+            const angle = (i / nodeCount) * Math.PI * 2 + time * this.orbitSpeed;
 
             // Position nodes in orbit around core
             node.position.x = Math.cos(angle) * this.orbitRadius;
@@ -97,12 +98,9 @@ export class OrbitalNodes {
 
             // Highlight active node
             if (this.activeNode === node.userData.id) {
-                node.material.emissiveIntensity = 1.0;
                 node.scale.setScalar(1.3);
-            } else {
-                node.material.emissiveIntensity = 0.5;
             }
-        });
+        }
     }
 
     // Handle click detection with raycaster
@@ -159,10 +157,8 @@ export class OrbitalNodes {
         const node = this.nodes.find(n => n.userData.id === nodeId);
         if (node) {
             // Flash effect
-            node.material.emissiveIntensity = 2.0;
-            setTimeout(() => {
-                node.material.emissiveIntensity = 1.0;
-            }, 200);
+            // Note: MeshBasicMaterial doesn't support emissive, but we can simulate flash via opacity or color if needed
+            // For now, scale pulse is handled in update()
         }
     }
 
